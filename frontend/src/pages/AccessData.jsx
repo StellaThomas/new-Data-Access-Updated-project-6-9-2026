@@ -1,0 +1,530 @@
+import React, { useState } from "react";
+import axios from "axios";
+import { DataGrid } from "@mui/x-data-grid";
+
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import DownloadIcon from "@mui/icons-material/Download";
+
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Paper,
+  List,
+  ListItemButton,
+  ListItemText,
+  CircularProgress,
+  Avatar,
+  Chip,
+  Divider,
+} from "@mui/material";
+
+function AccessData() {
+  const [password, setPassword] = useState("");
+  const [tables, setTables] = useState([]);
+  const [tableData, setTableData] = useState([]);
+  const [selectedTable, setSelectedTable] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [recordCount, setRecordCount] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const handleAccess = async () => {
+    try {
+      setLoading(true);
+
+      const response = await axios.post("http://localhost:5000/api/access", {
+        password,
+      });
+
+      if (response.data.success) {
+        setTables(response.data.tables);
+        setMessage("Database Connected Successfully");
+        setIsLoggedIn(true);
+      }
+    } catch (error) {
+      setMessage("Invalid Password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTableData = async (table) => {
+    try {
+      setTableLoading(true);
+
+      setSelectedTable(table);
+
+      const response = await axios.get(
+        `http://localhost:5000/api/table/${table}`,
+      );
+
+      console.log("API RESPONSE:", response.data);
+
+      setTableData(response.data.data || []);
+      setRecordCount(response.data.count || 0);
+    } catch (error) {
+      console.error(error);
+      setTableData([]);
+      setRecordCount(0);
+    } finally {
+      setTableLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!tableData.length) return;
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(20);
+    doc.text("RCL Database Report", 14, 15);
+
+    doc.setFontSize(12);
+    doc.text(`Collection : ${selectedTable}`, 14, 25);
+    doc.text(`Total Records : ${recordCount}`, 14, 32);
+
+    const tableColumns = columns.map((col) => col.headerName);
+
+    const tableRows = rows.map((row) =>
+      columns.map((col) => row[col.field] || ""),
+    );
+
+    autoTable(doc, {
+      head: [tableColumns],
+      body: tableRows,
+
+      startY: 40,
+
+      headStyles: {
+        fillColor: [25, 118, 210],
+        textColor: [255, 255, 255],
+      },
+
+      styles: {
+        fontSize: 8,
+      },
+    });
+
+    doc.save(`${selectedTable}.pdf`);
+  };
+
+  const columns =
+    tableData.length > 0
+      ? Object.keys(tableData[0])
+          .filter((key) => key !== "_id")
+          .map((key) => ({
+            field: key,
+            headerName: key,
+            flex: 1,
+            minWidth: 150,
+          }))
+      : [];
+
+  const rows = tableData.map((row, index) => ({
+    id: row._id || index,
+    ...row,
+  }));
+
+  console.log("Columns =>", columns);
+  console.log("Rows =>", rows);
+
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg,#0f172a,#1e293b,#334155)",
+        p: 3,
+      }}
+    >
+      {/* Login Card */}
+
+      {!isLoggedIn && (
+        <Paper
+          sx={{
+            p: 4,
+            mb: 3,
+            borderRadius: 4,
+            maxWidth: "700px",
+            mx: "auto",
+            boxShadow: "0px 10px 30px rgba(0,0,0,0.25)",
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={2} mb={2}>
+            <Avatar
+              sx={{
+                bgcolor: "#1976d2",
+                width: 50,
+                height: 50,
+              }}
+            >
+              DB
+            </Avatar>
+
+            <Typography variant="h4" fontWeight="bold">
+              RCL Database Portal
+            </Typography>
+          </Box>
+
+          <TextField
+            fullWidth
+            type="password"
+            label="MDB Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            sx={{
+              mt: 2,
+            }}
+          />
+
+          <Button
+            variant="contained"
+            fullWidth
+            size="large"
+            sx={{
+              mt: 2,
+              py: 1.5,
+              borderRadius: 3,
+            }}
+            onClick={handleAccess}
+          >
+            {loading ? <CircularProgress size={25} /> : "Connect Database"}
+          </Button>
+
+          <Typography
+            mt={2}
+            color={message.includes("Successfully") ? "green" : "red"}
+          >
+            {message}
+          </Typography>
+        </Paper>
+      )}
+      {isLoggedIn && (
+        <Box sx={{ display: "flex", gap: 3 }}>
+          {/* Sidebar */}
+
+          <Paper
+            elevation={5}
+            sx={{
+              width: 300,
+              height: "calc(100vh - 100px)",
+              borderRadius: 3,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              backgroundColor: "#ffffff",
+              flexShrink: 0,
+            }}
+          >
+            {/* Search Box */}
+
+            <Box p={2}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="Search Collection..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    backgroundColor: "#f8fafc",
+                  },
+                }}
+              />
+            </Box>
+
+            {/* Header */}
+
+            <Box
+              sx={{
+                background: "linear-gradient(90deg,#1976d2,#42a5f5)",
+                p: 2,
+                textAlign: "center",
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  color: "#fff",
+                  fontWeight: 700,
+                }}
+              >
+                Collections ({tables.length})
+              </Typography>
+            </Box>
+
+            {/* Collection List */}
+
+            <List
+              sx={{
+                flex: 1,
+                overflowY: "scroll",
+                p: 1,
+
+                "&::-webkit-scrollbar": {
+                  width: "6px",
+                },
+
+                "&::-webkit-scrollbar-thumb": {
+                  background: "#1976d2",
+                  borderRadius: "10px",
+                },
+              }}
+            >
+              {tables
+                .filter((table) =>
+                  table.toLowerCase().includes(search.toLowerCase()),
+                )
+                .map((table) => (
+                  <ListItemButton
+                    key={table}
+                    selected={selectedTable === table}
+                    onClick={() => fetchTableData(table)}
+                    sx={{
+                      borderRadius: 2,
+                      mb: 1,
+
+                      "&.Mui-selected": {
+                        backgroundColor: "#1976d2",
+                        color: "#fff",
+
+                        "&:hover": {
+                          backgroundColor: "#1565c0",
+                        },
+                      },
+
+                      "&:hover": {
+                        backgroundColor: "#f1f5f9",
+                      },
+                    }}
+                  >
+                    <ListItemText
+                      primary={table}
+                      primaryTypographyProps={{
+                        fontSize: 15,
+                        fontWeight: selectedTable === table ? 600 : 500,
+                      }}
+                    />
+                  </ListItemButton>
+                ))}
+            </List>
+          </Paper>
+
+          {/* Data */}
+
+          <Paper
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              width: "100%",
+              height: "calc(100vh - 100px)",
+              overflow: "hidden",
+              borderRadius: 3,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Box
+              sx={{
+                p: 2,
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={2}>
+                <Typography variant="h6" color="primary" fontWeight="bold">
+                  Total Records: {recordCount}
+                </Typography>
+
+                <Button
+                  variant="contained"
+                  startIcon={<DownloadIcon />}
+                  onClick={handleDownloadPDF}
+                  disabled={!tableData.length}
+                  sx={{
+                    borderRadius: "30px",
+                    px: 3,
+                    fontWeight: "bold",
+
+                    background: "linear-gradient(90deg,#16a34a,#22c55e)",
+
+                    boxShadow: "0 4px 15px rgba(34,197,94,.4)",
+
+                    "&:hover": {
+                      background: "linear-gradient(90deg,#15803d,#16a34a)",
+                    },
+                  }}
+                >
+                  Download PDF
+                </Button>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {tableLoading ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    height: "300px",
+                  }}
+                >
+                  <CircularProgress />
+                </Box>
+              ) : tableData.length > 0 ? (
+                <Box
+                  sx={{
+                    flex: 1,
+                    width: "100%",
+                    minHeight: 0,
+                    backgroundColor: "#fff",
+                    borderRadius: 3,
+                    overflow: "hidden",
+                  }}
+                >
+                  <DataGrid
+                    rows={rows}
+                    columns={columns}
+                    loading={tableLoading}
+                    pagination
+                    pageSizeOptions={[10, 25, 50, 100]}
+                    initialState={{
+                      pagination: {
+                        paginationModel: {
+                          pageSize: 10,
+                        },
+                      },
+                    }}
+                    disableRowSelectionOnClick
+                    sx={{
+                      width: "100%",
+                      height: "100%",
+                      border: 0,
+                      borderRadius: 4,
+                      backgroundColor: "#fff",
+
+                      /* HEADER */
+
+                      "& .MuiDataGrid-columnHeaders": {
+                        background: "linear-gradient(90deg,#1976d2,#42a5f5)",
+                        color: "#fff",
+                        borderRadius: "12px 12px 0 0",
+                        borderBottom: "none",
+                      },
+
+                      "& .MuiDataGrid-columnHeader": {
+                        background: "linear-gradient(90deg,#1976d2,#42a5f5)",
+                      },
+
+                      "& .MuiDataGrid-columnHeaderTitle": {
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: "14px",
+                        textTransform: "capitalize",
+                      },
+
+                      "& .MuiDataGrid-iconSeparator": {
+                        color: "rgba(255,255,255,0.4)",
+                      },
+
+                      "& .MuiDataGrid-sortIcon": {
+                        color: "#fff",
+                      },
+
+                      "& .MuiDataGrid-menuIcon button": {
+                        color: "#fff",
+                      },
+
+                      /* ROWS */
+
+                      "& .MuiDataGrid-row": {
+                        transition: "all 0.2s ease",
+                      },
+
+                      "& .MuiDataGrid-row:nth-of-type(even)": {
+                        backgroundColor: "#f8fafc",
+                      },
+
+                      "& .MuiDataGrid-row:hover": {
+                        backgroundColor: "#e3f2fd",
+                        transform: "scale(1.001)",
+                      },
+
+                      "& .MuiDataGrid-cell": {
+                        borderBottom: "1px solid #e5e7eb",
+                        fontSize: "14px",
+                        color: "#334155",
+                      },
+
+                      /* SELECTED ROW */
+
+                      "& .Mui-selected": {
+                        backgroundColor: "#bbdefb !important",
+                      },
+
+                      /* FOOTER */
+
+                      "& .MuiDataGrid-footerContainer": {
+                        backgroundColor: "#f8fafc",
+                        borderTop: "1px solid #e5e7eb",
+                      },
+
+                      "& .MuiTablePagination-root": {
+                        color: "#0f172a",
+                        fontWeight: 600,
+                      },
+
+                      /* SCROLLBAR */
+
+                      "& ::-webkit-scrollbar": {
+                        width: "8px",
+                        height: "8px",
+                      },
+
+                      "& ::-webkit-scrollbar-track": {
+                        background: "#f1f5f9",
+                      },
+
+                      "& ::-webkit-scrollbar-thumb": {
+                        background: "#1976d2",
+                        borderRadius: "20px",
+                      },
+
+                      "& ::-webkit-scrollbar-thumb:hover": {
+                        background: "#1565c0",
+                      },
+
+                      /* REMOVE FOCUS BORDER */
+
+                      "& .MuiDataGrid-cell:focus": {
+                        outline: "none",
+                      },
+
+                      "& .MuiDataGrid-columnHeader:focus": {
+                        outline: "none",
+                      },
+                    }}
+                  />
+                </Box>
+              ) : (
+                <Typography align="center" color="text.secondary" mt={5}>
+                  No Data Found
+                </Typography>
+              )}
+            </Box>
+          </Paper>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+export default AccessData;
