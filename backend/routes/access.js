@@ -92,8 +92,12 @@ router.get(
 // MONGODB COLLECTIONS
 // =========================
 
+// =========================
+// MONGODB COLLECTION DATA
+// =========================
+
 router.get(
-  "/collections",
+  "/mongodb/:collectionName",
   async (req, res) => {
 
     try {
@@ -101,25 +105,49 @@ router.get(
       const db =
         await connectMongo();
 
-      const collections =
+      const collectionName =
+        req.params.collectionName;
+
+      // Total Records Count
+      const totalCount =
         await db
-          .listCollections()
+          .collection(collectionName)
+          .countDocuments();
+
+      // Fetch ALL Records
+      const data =
+        await db
+          .collection(collectionName)
+          .find({})
           .toArray();
 
-      const names =
-        collections.map(
-          (item) => item.name
-        );
-
-      res.status(200).json(
-        names
+      console.log(
+        "Collection:",
+        collectionName
       );
+
+      console.log(
+        "Total Count:",
+        totalCount
+      );
+
+      console.log(
+        "Data Length:",
+        data.length
+      );
+
+      res.status(200).json({
+        success: true,
+        count: totalCount,
+        data,
+      });
 
     } catch (error) {
 
       console.log(error);
 
       res.status(500).json({
+        success: false,
         message:
           error.message,
       });
@@ -172,6 +200,24 @@ router.get(
 );
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 // =========================
 
 module.exports = router;
+
+
+
+
+
+

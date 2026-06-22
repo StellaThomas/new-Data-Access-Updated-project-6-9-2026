@@ -8,6 +8,8 @@ import {
 import Login from "./pages/Login";
 import AccessData from "./pages/AccessData";
 import DatabaseDashboard from "./pages/DatabaseDashboard";
+import InwardReport from "./pages/InwardReport";
+import HistoryCard from "./pages/HistoryCard";
 
 function App() {
   return (
@@ -37,6 +39,19 @@ function App() {
           path="*"
           element={<Navigate to="/" />}
         />
+
+
+        <Route
+  path="/inward-report"
+  element={<InwardReport />}
+/>
+
+
+
+<Route
+ path="/history-card"
+ element={<HistoryCard />}
+/>
 
       </Routes>
     </BrowserRouter>

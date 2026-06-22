@@ -5,6 +5,7 @@ import { DataGrid } from "@mui/x-data-grid";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import DownloadIcon from "@mui/icons-material/Download";
+import { useNavigate } from "react-router-dom";
 
 import {
   Box,
@@ -32,26 +33,55 @@ function AccessData() {
   const [search, setSearch] = useState("");
   const [recordCount, setRecordCount] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
 
   const handleAccess = async () => {
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const response = await axios.post("http://localhost:5000/api/access", {
+    const response = await axios.post(
+      "http://localhost:5000/api/access",
+      {
         password,
-      });
-
-      if (response.data.success) {
-        setTables(response.data.tables);
-        setMessage("Database Connected Successfully");
-        setIsLoggedIn(true);
       }
-    } catch (error) {
-      setMessage("Invalid Password");
-    } finally {
-      setLoading(false);
+    );
+
+    if (response.data.success) {
+
+      console.log(
+        "Tables Count =>",
+        response.data.tables.length
+      );
+
+      console.log(
+        "Tables =>",
+        response.data.tables
+      );
+
+      setTables(
+        response.data.tables
+      );
+
+      setMessage(
+        "Database Connected Successfully"
+      );
+
+      setIsLoggedIn(true);
     }
-  };
+
+  } catch (error) {
+
+    setMessage(
+      "Invalid Password"
+    );
+
+  } finally {
+
+    setLoading(false);
+  }
+};
+
+
 
   const fetchTableData = async (table) => {
     try {
@@ -77,41 +107,84 @@ function AccessData() {
   };
 
   const handleDownloadPDF = () => {
-    if (!tableData.length) return;
+  if (!tableData.length) return;
 
-    const doc = new jsPDF();
+  const doc = new jsPDF(
+    "landscape",
+    "mm",
+    "a2"
+  );
 
-    doc.setFontSize(20);
-    doc.text("RCL Database Report", 14, 15);
 
-    doc.setFontSize(12);
-    doc.text(`Collection : ${selectedTable}`, 14, 25);
-    doc.text(`Total Records : ${recordCount}`, 14, 32);
 
-    const tableColumns = columns.map((col) => col.headerName);
 
-    const tableRows = rows.map((row) =>
-      columns.map((col) => row[col.field] || ""),
-    );
+ 
+  // Title
+  doc.setFontSize(20);
+  doc.text("RCL Database Report", 14, 15);
 
-    autoTable(doc, {
-      head: [tableColumns],
-      body: tableRows,
+  // Collection Info
+  doc.setFontSize(12);
+  doc.text(`Collection : ${selectedTable}`, 14, 25);
+  doc.text(`Total Records : ${recordCount}`, 14, 32);
 
-      startY: 40,
+  doc.text(
+    `Generated On : ${new Date().toLocaleDateString()}`,
+    14,
+    39
+  );
 
-      headStyles: {
-        fillColor: [25, 118, 210],
-        textColor: [255, 255, 255],
-      },
+  // Table Columns
+  const tableColumns = columns.map(
+    (col) => col.headerName
+  );
 
-      styles: {
-        fontSize: 8,
-      },
-    });
+  // Table Rows
+  const tableRows = rows.map((row) =>
+    columns.map(
+      (col) => row[col.field] ?? ""
+    )
+  );
 
-    doc.save(`${selectedTable}.pdf`);
-  };
+  autoTable(doc, {
+    head: [tableColumns],
+    body: tableRows,
+
+    startY: 45,
+
+    theme: "grid",
+
+    styles: {
+      fontSize: 6,
+      cellPadding: 1.5,
+      overflow: "hidden",
+      halign: "left",
+      valign: "middle",
+    },
+
+    headStyles: {
+      fillColor: [25, 118, 210],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 7,
+    },
+
+    alternateRowStyles: {
+      fillColor: [245, 245, 245],
+    },
+
+    margin: {
+      left: 5,
+      right: 5,
+    },
+
+    tableWidth: "auto",
+  });
+
+
+
+  doc.save(`${selectedTable}.pdf`);
+};
 
   const columns =
     tableData.length > 0
@@ -338,33 +411,86 @@ function AccessData() {
                 overflow: "hidden",
               }}
             >
-              <Box display="flex" alignItems="center" gap={2}>
-                <Typography variant="h6" color="primary" fontWeight="bold">
-                  Total Records: {recordCount}
-                </Typography>
+            <Box
+  sx={{
+    display: "flex",
+    alignItems: "center",
+    gap: 2,
+    flexWrap: "wrap",
+  }}
+>
+  {/* Total Records */}
 
-                <Button
-                  variant="contained"
-                  startIcon={<DownloadIcon />}
-                  onClick={handleDownloadPDF}
-                  disabled={!tableData.length}
-                  sx={{
-                    borderRadius: "30px",
-                    px: 3,
-                    fontWeight: "bold",
+  <Typography
+    variant="h6"
+    color="primary"
+    fontWeight="bold"
+  >
+    Total Records: {recordCount}
+  </Typography>
 
-                    background: "linear-gradient(90deg,#16a34a,#22c55e)",
+  {/* Selected Table Name */}
 
-                    boxShadow: "0 4px 15px rgba(34,197,94,.4)",
+  {selectedTable && (
+   <Typography
+  sx={{
+    bgcolor: "#1976d2",
+    color: "#fff",
+    px: 2,
+    py: 1,
+    borderRadius: "20px",
+    fontWeight: "bold",
+  }}
+>
+  {selectedTable}
+</Typography>
+  )}
 
-                    "&:hover": {
-                      background: "linear-gradient(90deg,#15803d,#16a34a)",
-                    },
-                  }}
-                >
-                  Download PDF
-                </Button>
-              </Box>
+  {/* Download Button */}
+
+  <Button
+    variant="contained"
+    startIcon={<DownloadIcon />}
+    onClick={handleDownloadPDF}
+    disabled={!tableData.length}
+    sx={{
+      borderRadius: "30px",
+      px: 3,
+      fontWeight: "bold",
+
+      background:
+        "linear-gradient(90deg,#16a34a,#22c55e)",
+
+      boxShadow:
+        "0 4px 15px rgba(34,197,94,.4)",
+
+      "&:hover": {
+        background:
+          "linear-gradient(90deg,#15803d,#16a34a)",
+      },
+    }}
+  >
+    Download PDF
+  </Button>
+
+
+<Button
+  variant="contained"
+  color="secondary"
+  onClick={() =>
+    navigate("/inward-report")
+  }
+  sx={{
+    borderRadius: "30px",
+    px: 3,
+    fontWeight: "bold",
+  }}
+>
+  Joined Inward Report
+</Button>
+
+
+</Box>
 
               <Divider sx={{ my: 2 }} />
 
@@ -528,3 +654,72 @@ function AccessData() {
 }
 
 export default AccessData;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

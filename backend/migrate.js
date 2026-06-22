@@ -1,3 +1,5 @@
+
+
 // const odbc = require("odbc");
 // const { MongoClient } = require("mongodb");
 
@@ -15,7 +17,12 @@
 
 //     // MongoDB Connection
 //     mongoClient = new MongoClient(
-//       "mongodb://127.0.0.1:27017"
+//       "mongodb://127.0.0.1:27017",
+//       {
+//         maxPoolSize: 20,
+//         serverSelectionTimeoutMS: 30000,
+//         socketTimeoutMS: 600000,
+//       }
 //     );
 
 //     await mongoClient.connect();
@@ -32,45 +39,71 @@
 //       "TABLE"
 //     );
 
-//     console.log(`\n📊 Total Tables Found: ${tables.length}\n`);
+//     console.log(
+//       `\n📊 Total Tables Found: ${tables.length}\n`
+//     );
 
 //     for (const table of tables) {
 //       const tableName = table.TABLE_NAME;
 
 //       try {
-//         console.log(`📦 Importing: ${tableName}`);
+//         console.log(
+//           `\n📦 Importing: ${tableName}`
+//         );
 
 //         const records = await accessDB.query(
 //           `SELECT * FROM [${tableName}]`
 //         );
 
 //         console.log(
-//           `   Records Found: ${records.length}`
+//           `📄 Records Found: ${records.length}`
 //         );
 
-//         // Collection clean
+//         // Clear Collection
 //         await mongoDB
 //           .collection(tableName)
 //           .deleteMany({});
 
-//         if (records.length > 0) {
+//         if (records.length === 0) {
+//           console.log(
+//             `⚠️ ${tableName} Empty Table`
+//           );
+//           continue;
+//         }
+
+//         const batchSize = 5000;
+
+//         for (
+//           let i = 0;
+//           i < records.length;
+//           i += batchSize
+//         ) {
+//           const batch = records.slice(
+//             i,
+//             i + batchSize
+//           );
+
 //           await mongoDB
 //             .collection(tableName)
-//             .insertMany(records);
+//             .insertMany(batch);
 
 //           console.log(
-//             `   ✅ ${tableName} Imported`
-//           );
-//         } else {
-//           console.log(
-//             `   ⚠️ Empty Table`
+//             `   Inserted ${Math.min(
+//               i + batchSize,
+//               records.length
+//             )}/${records.length}`
 //           );
 //         }
 
+//         console.log(
+//           `✅ ${tableName} Imported`
+//         );
+
 //       } catch (err) {
 //         console.log(
-//           `   ❌ Error Importing ${tableName}`
+//           `❌ Error Importing ${tableName}`
 //         );
+
 //         console.log(err.message);
 //       }
 //     }
@@ -80,15 +113,37 @@
 //     );
 
 //   } catch (error) {
-//     console.log("❌ Migration Error");
+//     console.log(
+//       "\n❌ Migration Failed"
+//     );
+
 //     console.log(error);
 //   } finally {
-//     if (accessDB) await accessDB.close();
-//     if (mongoClient) await mongoClient.close();
+//     try {
+//       if (accessDB) {
+//         await accessDB.close();
+//       }
+
+//       if (mongoClient) {
+//         await mongoClient.close();
+//       }
+
+//       console.log(
+//         "\n🔒 Connections Closed"
+//       );
+
+//     } catch (err) {
+//       console.log(err.message);
+//     }
 //   }
 // }
 
 // migrateAll();
+
+
+
+
+
 
 
 
@@ -153,7 +208,9 @@ async function migrateAll() {
 
     console.log("✅ MongoDB Connected");
 
-    const mongoDB = mongoClient.db("RCLDatabase");
+    const mongoDB = mongoClient.db(
+      "RCLDatabase"
+    );
 
     // Get All Tables
     const tables = await accessDB.tables(
@@ -171,52 +228,125 @@ async function migrateAll() {
       const tableName = table.TABLE_NAME;
 
       try {
-        console.log(
-          `\n📦 Importing: ${tableName}`
-        );
 
-        const records = await accessDB.query(
-          `SELECT * FROM [${tableName}]`
-        );
+       console.log(
+  `\n📦 Importing: ${tableName}`
+);
+
+// Skip TInwardDetails temporarily
+// if (tableName === "TInwardDetails") {
+
+//   console.log(
+//     "⏭️ Skipping TInwardDetails Temporarily"
+//   );
+
+//   continue;
+// }
+
+let records = [];
+
+
+
+
+
+        
+
+        try {
+
+          records =
+            await accessDB.query(
+              `SELECT * FROM [${tableName}]`
+            );
+
+        } catch (readErr) {
+
+          console.log(
+            `❌ Cannot Read ${tableName}`
+          );
+
+          console.log(
+            readErr.message
+          );
+
+          continue;
+        }
 
         console.log(
           `📄 Records Found: ${records.length}`
         );
 
-        // Clear Collection
+
+try {
+
+  await mongoDB.createCollection(
+    tableName
+  );
+
+} catch (err) {
+  // Collection already exists
+}
+
+
+        // Clear Existing Collection
         await mongoDB
           .collection(tableName)
           .deleteMany({});
 
+
+
+
         if (records.length === 0) {
+
           console.log(
             `⚠️ ${tableName} Empty Table`
           );
+
           continue;
         }
 
-        const batchSize = 5000;
+        // Batch Size
+        const batchSize = 1000;
 
         for (
           let i = 0;
           i < records.length;
           i += batchSize
         ) {
-          const batch = records.slice(
-            i,
-            i + batchSize
-          );
 
-          await mongoDB
-            .collection(tableName)
-            .insertMany(batch);
+          const batch =
+            records.slice(
+              i,
+              i + batchSize
+            );
 
-          console.log(
-            `   Inserted ${Math.min(
-              i + batchSize,
-              records.length
-            )}/${records.length}`
-          );
+          try {
+
+            await mongoDB
+              .collection(tableName)
+              .insertMany(
+                batch,
+                {
+                  ordered: false,
+                }
+              );
+
+            console.log(
+              `Inserted ${Math.min(
+                i + batchSize,
+                records.length
+              )}/${records.length}`
+            );
+
+          } catch (insertErr) {
+
+            console.log(
+              `❌ Insert Error In ${tableName}`
+            );
+
+            console.log(
+              insertErr.message
+            );
+          }
         }
 
         console.log(
@@ -224,11 +354,14 @@ async function migrateAll() {
         );
 
       } catch (err) {
+
         console.log(
           `❌ Error Importing ${tableName}`
         );
 
-        console.log(err.message);
+        console.log(
+          err.message
+        );
       }
     }
 
@@ -237,13 +370,17 @@ async function migrateAll() {
     );
 
   } catch (error) {
+
     console.log(
       "\n❌ Migration Failed"
     );
 
     console.log(error);
+
   } finally {
+
     try {
+
       if (accessDB) {
         await accessDB.close();
       }
@@ -257,7 +394,10 @@ async function migrateAll() {
       );
 
     } catch (err) {
-      console.log(err.message);
+
+      console.log(
+        err.message
+      );
     }
   }
 }
