@@ -246,22 +246,36 @@ router.get(
 
       const data = await db
         .collection("TInwardDetails")
-        .aggregate([
-          {
-            $match: {
-              InwardNo: inwardNo
-            }
-          },
 
-          {
-            $lookup: {
-              from: "TInward",
-              localField: "InwardNo",
-              foreignField: "InwardNo",
-              as: "InwardMaster"
-            }
-          }
-        ])
+        .aggregate([
+  {
+    $match: {
+      LABIDNo: gaugeNo
+    }
+  },
+
+  {
+    $lookup: {
+      from: "mCalibrationAgency",
+      localField: "CalibrationAgencyID",
+      foreignField: "CalibrationAgencyID",
+      as: "AgencyInfo"
+    }
+  },
+
+  {
+    $unwind: {
+      path: "$AgencyInfo",
+      preserveNullAndEmptyArrays: true
+    }
+  },
+
+  {
+    $sort: {
+      CalibratedOn: 1
+    }
+  }
+])
         .toArray();
 
       res.json({
