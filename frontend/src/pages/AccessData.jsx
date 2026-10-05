@@ -35,16 +35,19 @@ function AccessData() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
 
+
+  const API_URL = process.env.REACT_APP_API_BASE_URL;
+
   const handleAccess = async () => {
   try {
     setLoading(true);
 
-    const response = await axios.post(
-      "http://localhost:5000/api/access",
-      {
-        password,
-      }
-    );
+   const response = await axios.post(
+  `${API_URL}/api/access`,
+  {
+    password,
+  }
+);
 
     if (response.data.success) {
 
@@ -90,7 +93,7 @@ function AccessData() {
       setSelectedTable(table);
 
       const response = await axios.get(
-        `http://localhost:5000/api/table/${table}`,
+        `${API_URL}/api/table/${table}`,
       );
 
       console.log("API RESPONSE:", response.data);

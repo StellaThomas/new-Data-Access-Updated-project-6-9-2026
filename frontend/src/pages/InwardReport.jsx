@@ -54,10 +54,9 @@ const endRecord =
 
       setLoading(true);
 
-      const response =
-  await axios.get(
-    `http://localhost:5000/api/inward-full-report?page=${page}&limit=${PAGE_SIZE}`
-  );
+     const response = await axios.get(
+  `${process.env.REACT_APP_API_BASE_URL}/inward-full-report?page=${page}&limit=${PAGE_SIZE}`
+);
 
       setData(
         response.data.data || []

@@ -1,95 +1,308 @@
 
 
-const express = require("express");
-const router = express.Router();
-
-const connectDB = require("../config/db");
 
 
-// // ======================================
-// // GET ALL CUSTOMERS
-// // ======================================
-// router.get("/customers", async (req, res) => {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// const express = require("express");
+// const router = express.Router();
+
+// const connectDB = require("../config/db");
+
+// // =====================================================
+// // CREATE PASSWORD / CREATE CUSTOMER ACCOUNT
+// // =====================================================
+
+// router.post("/create-password", async (req, res) => {
 //   try {
+//     const { customerId, username, password } = req.body;
+
+//     console.log("\n========================================");
+//     console.log("CREATE PASSWORD REQUEST");
+//     console.log("========================================");
+//     console.log("Raw Customer ID :", customerId);
+//     console.log("Customer ID Type:", typeof customerId);
+//     console.log("Username        :", username);
+//     console.log("Password        :", password ? "******" : "EMPTY");
+
+//     // -------------------------------------------------
+//     // Validation
+//     // -------------------------------------------------
+
+//     if (!customerId || !username || !password) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Customer ID, Username and Password are required",
+//       });
+//     }
+
+//     const cleanCustomerId = String(customerId).trim();
+//     const cleanUsername = String(username).trim();
+//     const cleanPassword = String(password).trim();
+
+//     console.log("Clean Customer ID :", cleanCustomerId);
+//     console.log("Clean Username    :", cleanUsername);
+
+//     // -------------------------------------------------
+//     // Validate Customer ID
+//     // -------------------------------------------------
+
+//     if (!/^\d+$/.test(cleanCustomerId)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Customer ID must be numeric",
+//       });
+//     }
+
+//     const customerIdNumber = Number(cleanCustomerId);
+
+//     console.log("Customer ID Number:", customerIdNumber);
+
+//     // -------------------------------------------------
+//     // Connect Database
+//     // -------------------------------------------------
+
 //     const db = await connectDB();
 
-//     const customers = await db
-//       .collection("mCustomer")
-//       .find(
-//         {},
+//     console.log("Database connected successfully");
+
+//     // -------------------------------------------------
+//     // Check collection
+//     // -------------------------------------------------
+
+//     const customerCollection = db.collection("mCustomer");
+
+//     const customerCount = await customerCollection.countDocuments();
+
+//     console.log("mCustomer Collection Count:", customerCount);
+
+//     // -------------------------------------------------
+//     // Find customer
+//     // IMPORTANT:
+//     // Search both Number and String CustomerID
+//     // -------------------------------------------------
+
+//     const customer = await customerCollection.findOne({
+//       $or: [
 //         {
-//           projection: {
-//             _id: 0,
-//             CustomerID: 1,
-//             Customer: 1,
-//           },
-//         }
-//       )
-//       .sort({ Customer: 1 })
-//       .toArray();
-
-//     res.json({
-//       success: true,
-//       data: customers,
+//           CustomerID: customerIdNumber,
+//         },
+//         {
+//           CustomerID: cleanCustomerId,
+//         },
+//       ],
 //     });
-//   } catch (error) {
-//     console.log("LOGIN ERROR :", error);
 
-//     res.status(500).json({
+//     console.log("Customer Found:", customer);
+
+//     // -------------------------------------------------
+//     // Customer not found
+//     // -------------------------------------------------
+
+//     if (!customer) {
+//       console.log(
+//         `❌ Customer ${cleanCustomerId} NOT FOUND in mCustomer`
+//       );
+
+//       // Additional debugging
+//       const sampleCustomer = await customerCollection.findOne({
+//         CustomerID: customerIdNumber,
+//       });
+
+//       console.log(
+//         "Number Search Result:",
+//         sampleCustomer
+//       );
+
+//       const stringCustomer = await customerCollection.findOne({
+//         CustomerID: cleanCustomerId,
+//       });
+
+//       console.log(
+//         "String Search Result:",
+//         stringCustomer
+//       );
+
+//       return res.status(404).json({
+//         success: false,
+//         message: "Invalid Customer ID",
+//       });
+//     }
+
+//     console.log("========================================");
+//     console.log("CUSTOMER FOUND");
+//     console.log("CustomerID :", customer.CustomerID);
+//     console.log("Customer   :", customer.Customer);
+//     console.log("Address    :", customer.Address);
+//     console.log("City       :", customer.City);
+//     console.log("Phone      :", customer.Phone);
+//     console.log("Email      :", customer.Email);
+//     console.log("========================================");
+
+//     // -------------------------------------------------
+//     // Check existing account
+//     // -------------------------------------------------
+
+//     const existingUser = await db.collection("users").findOne({
+//       CustomerID: customer.CustomerID,
+//     });
+
+//     console.log("Existing User:", existingUser);
+
+//     if (existingUser) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Account already created for this Customer",
+//       });
+//     }
+
+//     // -------------------------------------------------
+//     // Check Username
+//     // -------------------------------------------------
+
+//     const usernameExists = await db.collection("users").findOne({
+//       Username: cleanUsername,
+//     });
+
+//     console.log("Username Exists:", usernameExists);
+
+//     if (usernameExists) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Username already exists",
+//       });
+//     }
+
+//     // -------------------------------------------------
+//     // Create User
+//     // -------------------------------------------------
+
+//     const newUser = {
+//       CustomerID: customer.CustomerID,
+//       Customer: customer.Customer || "",
+//       Username: cleanUsername,
+//       Password: cleanPassword,
+//       CreatedAt: new Date(),
+//     };
+
+//     console.log("User To Insert:", {
+//       ...newUser,
+//       Password: "******",
+//     });
+
+//     const result = await db
+//       .collection("users")
+//       .insertOne(newUser);
+
+//     console.log("Inserted User ID:", result.insertedId);
+
+//     console.log("✅ ACCOUNT CREATED SUCCESSFULLY");
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Account Created Successfully",
+//     });
+
+//   } catch (error) {
+//     console.error("\n❌ CREATE PASSWORD ERROR:");
+//     console.error(error);
+
+//     return res.status(500).json({
 //       success: false,
-//       message: error.message,
+//       message: error.message || "Internal Server Error",
 //     });
 //   }
 // });
 
 
+// // =====================================================
+// // LOGIN
+// // =====================================================
 
-
-
-// // ======================================
-// // CHECK CUSTOMER
-// // ======================================
-// router.post("/check-customer", async (req, res) => {
+// router.post("/login", async (req, res) => {
 //   try {
+//     const { username, password } = req.body;
 
-//     const { customerName } = req.body;
+//     console.log("\n========================================");
+//     console.log("LOGIN REQUEST");
+//     console.log("========================================");
+//     console.log("Username:", username);
+//     console.log("Password:", password ? "******" : "EMPTY");
 
-//     console.log("\n========== CHECK CUSTOMER ==========");
-//     console.log("Received Customer :", customerName);
+//     // -------------------------------------------------
+//     // Validation
+//     // -------------------------------------------------
 
-//     if (!customerName) {
+//     if (!username || !password) {
 //       return res.status(400).json({
 //         success: false,
-//         message: "Customer Name is required",
+//         message: "Username and Password are required",
 //       });
 //     }
 
-//     const searchName = customerName.trim();
-
-//     console.log("Search Name :", searchName);
+//     const cleanUsername = String(username).trim();
+//     const cleanPassword = String(password).trim();
 
 //     const db = await connectDB();
 
-//     // Find customer by trimming spaces in MongoDB
-//     const allCustomers = await db.collection("mCustomer").find().toArray();
+//     // -------------------------------------------------
+//     // Find User
+//     // -------------------------------------------------
 
-// console.log("Total Customers :", allCustomers.length);
+//     const user = await db.collection("users").findOne({
+//       Username: cleanUsername,
+//       Password: cleanPassword,
+//     });
 
-// const customer = allCustomers.find((c) => {
-//   if (!c.Customer) return false;
+//     console.log("User Found:", user);
 
-//   console.log(
-//     "DB:",
-//     JSON.stringify(c.Customer),
-//     "=>",
-//     JSON.stringify(c.Customer.trim())
-//   );
+//     if (!user) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Invalid Username or Password",
+//       });
+//     }
 
-//   return c.Customer.trim() === searchName;
-// });
+//     // -------------------------------------------------
+//     // Find Customer
+//     // Support number/string CustomerID
+//     // -------------------------------------------------
 
-// console.log("Customer Found :", customer);
-//     console.log("Customer Found :", customer);
+//     const customer = await db.collection("mCustomer").findOne({
+//       $or: [
+//         {
+//           CustomerID: user.CustomerID,
+//         },
+//         {
+//           CustomerID: String(user.CustomerID),
+//         },
+//         {
+//           CustomerID: Number(user.CustomerID),
+//         },
+//       ],
+//     });
+
+//     console.log("Customer Found:", customer);
 
 //     if (!customer) {
 //       return res.status(404).json({
@@ -98,32 +311,49 @@ const connectDB = require("../config/db");
 //       });
 //     }
 
-//     // Check if login already exists
-//     const user = await db.collection("users").findOne({
-//       CustomerID: customer.CustomerID,
-//     });
-
-//     console.log("User Found :", user);
+//     // -------------------------------------------------
+//     // Login Success
+//     // -------------------------------------------------
 
 //     return res.status(200).json({
 //       success: true,
-//       customerId: customer.CustomerID,
-//       customerName: customer.Customer,
-//       hasPassword: !!user,
+//       message: "Login Successful",
+
+//       customer: {
+//         CustomerID: customer.CustomerID,
+//         Customer: customer.Customer,
+//         Address: customer.Address,
+//         City: customer.City,
+//         Phone: customer.Phone,
+//         Email: customer.Email,
+//         Zone: customer.Zone,
+//         GSTNo: customer.GSTNo,
+//         CompanyID: customer.CompanyID,
+//       },
 //     });
 
 //   } catch (error) {
-
-//     console.log("CHECK CUSTOMER ERROR :", error);
+//     console.error("\n❌ LOGIN ERROR:");
+//     console.error(error);
 
 //     return res.status(500).json({
 //       success: false,
-//       message: error.message,
+//       message: error.message || "Internal Server Error",
 //     });
-
 //   }
 // });
 
+
+// module.exports = router;
+
+
+
+
+
+const express = require("express");
+const router = express.Router();
+
+const connectDB = require("../config/db");
 
 
 // ======================================

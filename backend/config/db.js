@@ -1,64 +1,3 @@
-// const odbc = require("odbc");
-
-// const connectDB = async () => {
-//   try {
-//     const connection = await odbc.connect(
-//       "Driver={Microsoft Access Driver (*.mdb, *.accdb)};" +
-//       "Dbq=E:\\RCL\\Data\\eCalLab_be.mdb;" +
-//       "PWD=suvarn;"
-//     );
-
-//     console.log("✅ Database Connected");
-
-//     return connection;
-//   } catch (error) {
-//     console.error("❌ Database Connection Error");
-//     console.error(error);
-//     throw error;
-//   }
-// };
-
-// module.exports = connectDB;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const { MongoClient } = require("mongodb");
 
@@ -92,3 +31,13 @@ const connectDB = async () => {
 };
 
 module.exports = connectDB;
+
+
+
+
+
+
+
+
+
+
